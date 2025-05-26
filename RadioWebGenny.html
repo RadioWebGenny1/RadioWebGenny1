@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RadioWebGenny Mini Player (No Audio)</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #mini-player {
+      background: rgba(14, 11, 90, 0.85);
+      padding: 15px;
+      width: 260px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      border: 2px solid;
+      border-image: linear-gradient(45deg, #ff416c, #ff4b2b, #1dd1a1, #54a0ff) 1;
+      border-radius: 0;
+    }
+
+    #mini-player img {
+      width: 100%;
+      height: 260px; /* Fissa altezza */
+      object-fit: cover; /* Mantiene proporzioni senza distorsione */
+      border-radius: 0;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      transition: transform 0.3s ease;
+    }
+
+    #mini-player img:hover {
+      transform: scale(1.03);
+    }
+
+    .title-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: 1em;
+      margin: 5px 0;
+    }
+
+    .bar {
+      font-size: 1.2em;
+      color: #1dd1a1;
+      padding: 0 4px;
+    }
+
+    .scrolling-title-container {
+      overflow: hidden;
+      white-space: nowrap;
+      width: 100%;
+      text-align: left;
+    }
+
+    .scrolling-title {
+      display: inline-block;
+      animation: scroll-left 10s linear infinite;
+      padding-left: 100%;
+    }
+
+    @keyframes scroll-left {
+      0% {
+        transform: translateX(0%);
+      }
+      100% {
+        transform: translateX(-100%);
+      }
+    }
+
+    .artist {
+      font-size: 0.9em;
+      color: #ccc;
+      margin-top: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #station-name {
+      margin-top: 10px;
+      font-size: 0.95em;
+      color: #1dd1a1;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div id="mini-player">
+    <img id="mini-cover" src="https://i.postimg.cc/q7QTQq1s/ioooo.png" alt="Cover" />
+    
+    <div class="title-wrapper">
+      <span class="bar">|</span>
+      <div class="scrolling-title-container">
+        <div class="scrolling-title" id="mini-title"></div>
+      </div>
+      <span class="bar">|</span>
+    </div>
+    
+    <div class="artist" id="mini-artist"></div>
+    <div id="station-name">RADIOWEBGENNY</div>
+  </div>
+
+  <script>
+    const nowPlayingUrl = "https://zenoplay.zenomedia.com/api/zenofm/nowplaying/psejpep4hvguv";
+    const defaultImage = "https://i.postimg.cc/q7QTQq1s/ioooo.png";
+    const coverImg = document.getElementById('mini-cover');
+    const titleElem = document.getElementById('mini-title');
+    const artistElem = document.getElementById('mini-artist');
+
+    async function fetchNowPlaying() {
+      try {
+        const response = await fetch(nowPlayingUrl);
+        const data = await response.json();
+
+        const title = data?.title?.trim() || "";
+        const artist = data?.artist?.trim() || "";
+
+        titleElem.textContent = title || "Sconosciuto";
+        artistElem.textContent = artist;
+
+        fetchCover(title, artist);
+      } catch (error) {
+        console.error("Errore nel caricamento dei dati:", error);
+        titleElem.textContent = "Titolo non disponibile";
+        artistElem.textContent = "";
+        resetToDefault();
+      }
+    }
+
+    async function fetchCover(title, artist) {
+      if (!title && !artist) {
+        resetToDefault();
+        return;
+      }
+
+      const query = encodeURIComponent(`${title} ${artist}`);
+      const itunesUrl = `https://itunes.apple.com/search?term=${query}&limit=1&entity=song`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(itunesUrl)}`;
+
+      try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error("Risposta proxy non valida");
+
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+          const coverUrl = data.results[0].artworkUrl100.replace('100x100', '300x300');
+          coverImg.src = coverUrl;
+        } else {
+          resetToDefault();
+        }
+      } catch (error) {
+        console.error("Errore nel recupero della copertina:", error);
+        resetToDefault();
+      }
+    }
+
+    function resetToDefault() {
+      coverImg.src = defaultImage;
+    }
+
+    fetchNowPlaying();
+    setInterval(fetchNowPlaying, 20000);
+  </script>
+</body>
+</html>
